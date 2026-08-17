@@ -102,7 +102,7 @@
                 <!-- Datos generales -->
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label for="cliente" class="form-label fw-bold text-dark">Nombre del Cliente</label>
+                        <label for="cliente" class="form-label fw-bold text-dark">Nombre del Cliente:</label>
                         <div class="input-group">
                             <span class="input-group-text input-group-text-custom"><i class="bi bi-person-fill"></i></span>
                             <input type="text" class="form-control" id="cliente" required>
@@ -110,7 +110,7 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label for="sucursal" class="form-label fw-bold text-dark">Sucursal</label>
+                        <label for="sucursal" class="form-label fw-bold text-dark">Sucursal:</label>
                         <div class="input-group">
                             <span class="input-group-text input-group-text-custom"><i class="bi bi-building-fill"></i></span>
                             <select class="form-select" id="sucursal" required>
@@ -121,22 +121,22 @@
                             </select>
                         </div>
                     </div>
-
                     <div class="col-md-6">
-                        <label for="fecha" class="form-label fw-bold text-dark">Fecha de Toma</label>
-                        <div class="input-group">
-                            <span class="input-group-text input-group-text-custom"><i class="bi bi-calendar-event-fill"></i></span>
-                            <input type="date" class="form-control" id="fecha" required>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="video_id" class="form-label fw-bold text-dark">ID de Inspección</label>
+                        <label for="video_id" class="form-label fw-bold text-dark"># Crédito:</label>
                         <div class="input-group">
                             <span class="input-group-text input-group-text-custom"><i class="bi bi-hash"></i></span>
                             <input type="text" class="form-control" id="video_id" placeholder="Ej. INSP-2026-001" required>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <label for="fecha" class="form-label fw-bold text-dark">Ejecutivo:</label>
+                        <div class="input-group">
+                            <span class="input-group-text input-group-text-custom"><i class="bi bi-person-fill"></i></span>
+                            <input type="text" class="form-control" id="ejecutivo" required>
+                        </div>
+                    </div>
+
+
                 </div>
 
                 <hr class="my-4" style="color: var(--color-naranja-soft);">
@@ -286,7 +286,7 @@
         var commonData = {
             cliente: document.getElementById('cliente').value,
             sucursal: document.getElementById('sucursal').value,
-            fecha: document.getElementById('fecha').value,
+            fecha: document.getElementById('ejecutivo').value,
             video_id: document.getElementById('video_id').value
         };
 

@@ -1,0 +1,7 @@
+DETALLES DE LA INSPECCIÓN
+=========================
+Cliente: asdfadf
+Sucursal: Centro
+Fecha Toma: adfasd
+ID Inspección: asdfasdf
+Fecha Carga: 2026-08-17 21:03:47
