@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carga de Video - Portal de Inspecciones</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Resumable.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/resumable.js/1.1.0/resumable.min.js"></script>
+
+    <style>
+        :root {
+            --color-rojo-fuego: #D32F2F;
+            --color-naranja-vibrante: #E65100;
+            --color-naranja-soft: #F57C00;
+            --color-mostaza: #E6A100;
+            --color-mostaza-claro: #FFF8E1;
+            --color-fondo: #FAF6F0;
+        }
+
+        body {
+            background-color: var(--color-fondo);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .upload-card {
+            max-width: 650px;
+            margin: 40px auto;
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(211, 47, 47, 0.12);
+            overflow: hidden;
+            background-color: #ffffff;
+        }
+
+        .card-header-custom {
+            background: linear-gradient(135deg, var(--color-rojo-fuego) 0%, var(--color-naranja-vibrante) 100%);
+            color: #ffffff;
+            padding: 1.75rem 1.5rem;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--color-naranja-soft);
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            background-color: #FFFDF9;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .drop-zone:hover {
+            background-color: var(--color-mostaza-claro);
+            border-color: var(--color-rojo-fuego);
+            transform: translateY(-2px);
+        }
+
+        .icon-drop {
+            color: var(--color-naranja-vibrante);
+        }
+
+        .input-group-text-custom {
+            background-color: #FFF3E0;
+            color: var(--color-naranja-vibrante);
+            border-color: #FFE0B2;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--color-naranja-soft);
+            box-shadow: 0 0 0 0.25rem rgba(230, 81, 0, 0.25);
+        }
+
+        .btn-custom-submit {
+            background: linear-gradient(135deg, var(--color-naranja-vibrante) 0%, var(--color-rojo-fuego) 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-custom-submit:hover:not(:disabled) {
+            background: linear-gradient(135deg, var(--color-rojo-fuego) 0%, var(--color-naranja-vibrante) 100%);
+            color: #ffffff;
+            box-shadow: 0 6px 18px rgba(211, 47, 47, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-custom-submit:disabled {
+            background: #E0E0E0;
+            color: #9E9E9E;
+        }
+
+        .progress-bar-custom {
+            background: linear-gradient(90deg, var(--color-mostaza) 0%, var(--color-naranja-vibrante) 50%, var(--color-rojo-fuego) 100%);
+        }
+
+        .alert-file-selected {
+            background-color: var(--color-mostaza-claro);
+            border: 1px solid #FFE082;
+            color: #5D4037;
+            border-radius: 10px;
+        }
+
+        .badge-mustard {
+            background-color: var(--color-mostaza);
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card upload-card">
+        
+        <!-- Encabezado de la Card con degradado Naranja-Rojo -->
+        <div class="card-header-custom">
+            <h4 class="mb-1 fw-bold"><i class="bi bi-cloud-arrow-up-fill me-2"></i>Subir Video de </h4>
+            <!-- <p class="mb-0 small opacity-90">Completa la información y adjunta el video (soporta archivos de 1 GB+)</p> -->
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+            <form id="uploadForm" class="needs-validation" novalidate>
+                
+                <div class="row g-3">
+                    <!-- Cliente -->
+                    <div class="col-md-6">
+                        <label for="cliente" class="form-label fw-bold text-dark">Nombre del Cliente</label>
+                        <div class="input-group">
+                            <span class="input-group-text input-group-text-custom"><i class="bi bi-person-fill"></i></span>
+                            <input type="text" class="form-control" id="cliente" placeholder="Ej. Empresa ACME" required>
+                        </div>
+                    </div>
+
+                    <!-- Sucursal -->
+                    <div class="col-md-6">
+                        <label for="sucursal" class="form-label fw-bold text-dark">Sucursal</label>
+                        <div class="input-group">
+                            <span class="input-group-text input-group-text-custom"><i class="bi bi-building-fill"></i></span>
+                            <select class="form-select" id="sucursal" required>
+                                <option value="" selected disabled>Seleccionar...</option>
+                                <option value="Norte">Sucursal Norte</option>
+                                <option value="Sur">Sucursal Sur</option>
+                                <option value="Centro">Sucursal Centro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Fecha de Toma -->
+                    <div class="col-md-6">
+                        <label for="fecha" class="form-label fw-bold text-dark">Fecha de Toma</label>
+                        <div class="input-group">
+                            <span class="input-group-text input-group-text-custom"><i class="bi bi-calendar-event-fill"></i></span>
+                            <input type="date" class="form-control" id="fecha" required>
+                        </div>
+                    </div>
+
+                    <!-- ID Inspección -->
+                    <div class="col-md-6">
+                        <label for="video_id" class="form-label fw-bold text-dark">ID de Inspección</label>
+                        <div class="input-group">
+                            <span class="input-group-text input-group-text-custom"><i class="bi bi-hash"></i></span>
+                            <input type="text" class="form-control" id="video_id" placeholder="Ej. INSP-2026-001" required>
+                        </div>
+                    </div>
+
+                    <!-- Zona de Selección de Archivo -->
+                    <div class="col-12 mt-4">
+                        <label class="form-label fw-bold text-dark">Archivo de Video</label>
+                        <div class="drop-zone" id="browseButton">
+                            <i class="bi bi-file-earmark-play-fill display-4 icon-drop mb-2"></i>
+                            <h6 class="fw-bold text-dark">Haz clic para seleccionar el video</h6>
+                            <span class="text-muted small">Formatos soportados: MP4, MOV, MKV, AVI</span>
+                        </div>
+                        
+                        <!-- Contenedor con info del archivo seleccionado en tonos Mostaza -->
+                        <div id="fileInfo" class="alert alert-file-selected mt-3 d-none align-items-center" role="alert">
+                            <i class="bi bi-file-check-fill fs-3 me-3" style="color: var(--color-naranja-vibrante);"></i>
+                            <div>
+                                <strong id="fileNameDisplay" class="d-block text-dark">nombre_archivo.mp4</strong>
+                                <span id="fileSizeDisplay" class="badge badge-mustard mt-1">0 MB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de Progreso Naranja/Mostaza -->
+                <div id="progress-container" class="mt-4 d-none">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-bold" style="color: var(--color-naranja-vibrante);">Subiendo video a Hetzner Storage...</span>
+                        <span id="progress-text" class="fw-bold" style="color: var(--color-rojo-fuego);">0%</span>
+                    </div>
+                    <div class="progress" style="height: 14px; background-color: #FFE0B2;">
+                        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated progress-bar-custom" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Mensaje de Alerta General -->
+                <div id="status-msg" class="alert mt-4 d-none" role="alert"></div>
+
+                <!-- Botón de Envío Naranja / Rojo -->
+                <div class="mt-4">
+                    <button type="submit" id="submitBtn" class="btn btn-custom-submit btn-lg w-100 py-3 fw-bold" disabled>
+                        <i class="bi bi-send-fill me-2"></i>Enviar Registro y Video
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    var r = new Resumable({
+        target: 'upload.php',
+        chunkSize: 10 * 1024 * 1024,
+        simultaneousUploads: 3,
+        testChunks: false
+    });
+
+    var selectedFile = null;
+
+    r.assignBrowse(document.getElementById('browseButton'));
+
+    r.on('fileAdded', function(file) {
+        selectedFile = file;
+        
+        document.getElementById('fileNameDisplay').innerText = file.fileName;
+        document.getElementById('fileSizeDisplay').innerText = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+        
+        var fileInfo = document.getElementById('fileInfo');
+        fileInfo.classList.remove('d-none');
+        fileInfo.classList.add('d-flex');
+        
+        document.getElementById('submitBtn').disabled = false;
+    });
+
+    r.on('fileProgress', function(file) {
+        var progress = Math.floor(file.progress() * 100);
+        document.getElementById('progress-bar').style.width = progress + '%';
+        document.getElementById('progress-text').innerText = progress + '%';
+    });
+
+    r.on('fileSuccess', function(file, response) {
+        var res = JSON.parse(response);
+        var statusDiv = document.getElementById('status-msg');
+        
+        statusDiv.className = 'alert alert-success mt-4';
+        statusDiv.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>' + (res.message || '¡Video y datos registrados correctamente!');
+        
+        document.getElementById('progress-container').classList.add('d-none');
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('uploadForm').reset();
+        document.getElementById('fileInfo').classList.add('d-none');
+    });
+
+    r.on('fileError', function(file, message) {
+        var statusDiv = document.getElementById('status-msg');
+        statusDiv.className = 'alert alert-danger mt-4';
+        statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>Error al subir: ' + message;
+        
+        document.getElementById('submitBtn').disabled = false;
+    });
+
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            this.classList.add('was-validated');
+            return;
+        }
+
+        if (!selectedFile) return;
+
+        r.opts.query = {
+            cliente: document.getElementById('cliente').value,
+            sucursal: document.getElementById('sucursal').value,
+            fecha: document.getElementById('fecha').value,
+            video_id: document.getElementById('video_id').value
+        };
+
+        document.getElementById('progress-container').classList.remove('d-none');
+        document.getElementById('status-msg').classList.add('d-none');
+        document.getElementById('submitBtn').disabled = true;
+
+        r.upload();
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
