@@ -159,7 +159,16 @@ document.addEventListener("DOMContentLoaded", function () {
         .then((response) => response.json())
         .then((data) => {
           if (data.success) {
-            alert("¡Éxito! Los videos y el registro fueron respaldados correctamente en Hetzner Storage Box.\nUbicación: " + data.remote_folder);
+            // alert("¡Éxito! Los videos y el registro fueron respaldados correctamente en Hetzner Storage Box.\nUbicación: " + data.remote_folder);
+
+            // MODAL DE ÉXITO EN EL CENTRO
+            Swal.fire({
+              icon: "success",
+              title: "Videos Enviados!",
+              html: `Los videos fueron guardados correctamente en <br><br><small class="text-muted">Información: ${formData.sucursal.value() + "/" + formData.cliente.value()}</small>`,
+              confirmButtonText: "Aceptar",
+              confirmButtonColor: "#0d6efd",
+            });
 
             // Limpiar interfaz
             form.reset();
@@ -176,13 +185,27 @@ document.addEventListener("DOMContentLoaded", function () {
             r1.cancel();
             r2.cancel();
           } else {
-            alert("Error en la transferencia hacia Hetzner: " + data.error);
+            // alert("Error en la transferencia hacia Hetzner: " + data.error);
+            // MODAL DE ERROR DE SERVIDOR
+            Swal.fire({
+              icon: "error",
+              title: "Error de Transferencia",
+              text: "No se pudo completar el envío de los Videos: " + data.error,
+              confirmButtonColor: "#dc3545",
+            });
           }
           restablecerBoton();
         })
         .catch((error) => {
           console.error("Error en la petición final:", error);
-          alert("Ocurrió un error de red durante la transferencia final a Hetzner.");
+          //   alert("Ocurrió un error de red durante la transferencia final a Hetzner.");
+          // MODAL DE ERROR DE RED
+          Swal.fire({
+            icon: "error",
+            title: "Error de Red",
+            text: "Ocurrió un problema de conexión durante la transferencia final.",
+            confirmButtonColor: "#dc3545",
+          });
           restablecerBoton();
         });
     }
