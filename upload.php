@@ -1,5 +1,8 @@
 <?php
 
+// 1. Eliminar el límite de tiempo de ejecución para este script
+set_time_limit(0); 
+ini_set('max_execution_time', 0);
 
 // --- CONFIGURACIÓN ---
 // $MODO_PRUEBA_LOCAL = false; // Cambiar a 'false' cuando tengas tus accesos de Hetzner
@@ -114,6 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'finalize') {
     
     header('Content-Type: application/json');
+
+
 
     // Recibir metadata del formulario
     $sucursal = preg_replace('/[^a-zA-Z0-9_-]/', '_', $_POST['sucursal'] ?? 'general');
