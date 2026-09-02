@@ -1,9 +1,5 @@
 <?php
 
-// 1. Eliminar el límite de tiempo de ejecución para este script
-set_time_limit(0); 
-ini_set('max_execution_time', 0);
-
 // --- CONFIGURACIÓN ---
 // $MODO_PRUEBA_LOCAL = false; // Cambiar a 'false' cuando tengas tus accesos de Hetzner
 
@@ -115,6 +111,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 // ------------------------------------------------------------------
 // Esta sección se ejecuta cuando el cliente presiona el botón final con la metadata
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'finalize') {
+
+    set_time_limit(0);
+    ini_set('max_execution_time', '0');
+    ini_set('memory_limit', '512M');
     
     header('Content-Type: application/json');
 
@@ -130,8 +130,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $file2_local = $_POST['file2_path'] ?? ''; // Ruta local del video de contrato
 
     try {
-        // Conexión SFTP usando phpseclib3
+        
+    // Conexión SFTP usando phpseclib3
         $sftp = new SFTP($sftp_host, $sftp_port);
+        
+        // Establecer tiempo de espera de 10 minutos para la conexión y lectura
+        $sftp->setTimeout(600);
 
         if (!$sftp->login($sftp_user, $sftp_pass)) {
             throw new Exception("Error de autenticación en Hetzner Storage Box.");
@@ -183,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         echo json_encode([
             'success' => true,
-            'message' => 'Proceso completado con éxito. Videos y registros almacenados en Hetzner Storage Box.',
+            'message' => 'Proceso completado con exito. Videos y registros almacenados en Hetzner Storage Box.',
             'remote_folder' => $remote_dir
         ]);
 

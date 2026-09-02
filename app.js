@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Opciones recomendadas para evitar bloqueos
   const opcionesResumable = {
-    target: targetUrl,
+    target: "upload.php",
     chunkSize: 10 * 1024 * 1024, // Reducir a fragmentos de 1MB para asegurar que PHP los procese rápido
     simultaneousUploads: 5, // Subir de 1 en 1 para evitar colisiones en Windows/Laragon
     testChunks: false,
@@ -152,20 +152,21 @@ document.addEventListener("DOMContentLoaded", function () {
       let targetUrl = window.location.origin + basePath + "upload.php";
 
       // Petición final a upload.php (ejecuta phpseclib y sube por SFTP)
-      fetch(targetUrl, {
+      fetch("upload.php", {
         method: "POST",
         body: formData,
       })
         .then((response) => response.json())
         .then((data) => {
           if (data.success) {
-            // alert("¡Éxito! Los videos y el registro fueron respaldados correctamente en Hetzner Storage Box.\nUbicación: " + data.remote_folder);
-
             // MODAL DE ÉXITO EN EL CENTRO
             Swal.fire({
               icon: "success",
               title: "Videos Enviados!",
-              html: `Los videos fueron guardados correctamente en <br><br><small class="text-muted">Información: ${formData.sucursal.value() + "/" + formData.cliente.value()}</small>`,
+              html: `<p>Datos de envío:</p> <ul class="text-start ms-4"> <li><b>Sucursal:</b> ${formData.get("sucursal")}</li>
+            <li><b>Cliente:</b> ${formData.get("cliente")}</li>
+            <li><b>No. Crédito:</b> ${formData.get("id")}</li>
+        </ul>`,
               confirmButtonText: "Aceptar",
               confirmButtonColor: "#0d6efd",
             });
@@ -185,7 +186,6 @@ document.addEventListener("DOMContentLoaded", function () {
             r1.cancel();
             r2.cancel();
           } else {
-            // alert("Error en la transferencia hacia Hetzner: " + data.error);
             // MODAL DE ERROR DE SERVIDOR
             Swal.fire({
               icon: "error",
@@ -198,7 +198,6 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .catch((error) => {
           console.error("Error en la petición final:", error);
-          //   alert("Ocurrió un error de red durante la transferencia final a Hetzner.");
           // MODAL DE ERROR DE RED
           Swal.fire({
             icon: "error",
