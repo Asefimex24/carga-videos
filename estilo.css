@@ -1,0 +1,91 @@
+      :root {
+        --color-rojo-fuego: #d32f2f;
+        --color-naranja-vibrante: #e65100;
+        --color-naranja-soft: #f57c00;
+        --color-mostaza: #e6a100;
+        --color-mostaza-claro: #fff8e1;
+        --color-fondo: #faf6f0;
+      }
+
+      body {
+        background-color: var(--color-fondo);
+        font-family: system-ui, sans-serif;
+      }
+
+      .upload-card {
+        max-width: 700px;
+        margin: 40px auto;
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 12px 30px rgba(211, 47, 47, 0.12);
+        overflow: hidden;
+        background-color: #ffffff;
+      }
+
+      .card-header-custom {
+        background: linear-gradient(
+          135deg,
+          var(--color-rojo-fuego) 0%,
+          var(--color-naranja-vibrante) 100%
+        );
+        color: #ffffff;
+        padding: 1.75rem 1.5rem;
+      }
+
+      .drop-zone {
+        border: 2px dashed var(--color-naranja-soft);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        background-color: #fffdf9;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+
+      .drop-zone:hover {
+        background-color: var(--color-mostaza-claro);
+        border-color: var(--color-rojo-fuego);
+      }
+
+      .input-group-text-custom {
+        background-color: #fff3e0;
+        color: var(--color-naranja-vibrante);
+        border-color: #ffe0b2;
+      }
+
+      .btn-custom-submit {
+        background: linear-gradient(
+          135deg,
+          var(--color-naranja-vibrante) 0%,
+          var(--color-rojo-fuego) 100%
+        );
+        color: #ffffff;
+        border: none;
+        border-radius: 10px;
+        padding: 15px;
+      }
+
+      .btn-custom-submit:hover:not(:disabled) {
+        background: linear-gradient(
+          135deg,
+          var(--color-rojo-fuego) 0%,
+          var(--color-naranja-vibrante) 100%
+        );
+        color: #ffffff;
+      }
+
+      .progress-bar-custom {
+        background: linear-gradient(
+          90deg,
+          var(--color-mostaza) 0%,
+          var(--color-naranja-vibrante) 50%,
+          var(--color-rojo-fuego) 100%
+        );
+      }
+
+      .alert-file-selected {
+        background-color: var(--color-mostaza-claro);
+        border: 1px solid #ffe082;
+        color: #5d4037;
+        border-radius: 10px;
+      }

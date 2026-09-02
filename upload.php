@@ -1,118 +1,193 @@
 <?php
-header('Content-Type: application/json');
+
 
 // --- CONFIGURACIÓN ---
-$MODO_PRUEBA_LOCAL = true; // Cambiar a 'false' cuando tengas tus accesos de Hetzner
+// $MODO_PRUEBA_LOCAL = false; // Cambiar a 'false' cuando tengas tus accesos de Hetzner
 
-$sftp_host = 'uXXXXX.your-storagebox.de';
+
+// ------------------------------------------------------------------
+// 1. CONFIGURACIÓN DE ERRORES Y LIBRERÍAS
+// ------------------------------------------------------------------
+ini_set('display_errors', 0); // En producción 0, pon en 1 si necesitas depurar
+error_reporting(E_ALL);
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+use phpseclib3\Net\SFTP;
+
+// ------------------------------------------------------------------
+// 2. PARÁMETROS DE CONEXIÓN HETZNER STORAGE BOX
+// ------------------------------------------------------------------
+$sftp_host = 'u659197.your-storagebox.de'; // Reemplaza con tu host
 $sftp_port = 22;
-$sftp_user = 'uXXXXX';
-$sftp_pass = 'TuContraseñaSegura';
+$sftp_user = 'u659197';                    // Reemplaza con tu usuario
+$sftp_pass = 'G_3NQAnqQwkt6XedZWZqf6';      // Reemplaza con tu contraseña
 
-$temp_dir = sys_get_temp_dir() . '/resumable_chunks';
+// Directores locales temporales en Laragon
+$temp_dir = __DIR__ . '/uploads_temp';
 if (!file_exists($temp_dir)) {
     mkdir($temp_dir, 0777, true);
 }
 
-$resumableIdentifier  = $_POST['resumableIdentifier'] ?? '';
-$resumableFilename    = $_POST['resumableFilename'] ?? '';
-$resumableChunkNumber = $_POST['resumableChunkNumber'] ?? '';
-$resumableTotalChunks = $_POST['resumableTotalChunks'] ?? '';
+// ------------------------------------------------------------------
+// 3. PROCESAMIENTO DE FRAGMENTOS (CHUNKS) DE RESUMABLE.JS
+// ------------------------------------------------------------------
 
-if (!empty($_FILES)) {
-    $file = $_FILES['file'];
-    
-    $chunk_dir = $temp_dir . '/' . $resumableIdentifier;
-    if (!file_exists($chunk_dir)) {
-        mkdir($chunk_dir, 0777, true);
+// Verificación GET de Resumable.js (saber si un fragmento ya se subió)
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $identifier = $_GET['resumableIdentifier'] ?? '';
+    $filename = $_GET['resumableFilename'] ?? '';
+    $chunkNumber = $_GET['resumableChunkNumber'] ?? '';
+
+    $chunkFile = $temp_dir . '/' . $identifier . '.part' . $chunkNumber;
+
+    if (file_exists($chunkFile)) {
+        http_response_code(200);
+    } else {
+        http_response_code(204); // No content
     }
+    exit();
+}
 
-    $dest_file = $chunk_dir . '/' . $resumableFilename . '.part' . $resumableChunkNumber;
-    move_uploaded_file($file['tmp_name'], $dest_file);
+// Recepción POST de fragmentos
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
+    $identifier  = $_POST['resumableIdentifier'] ?? '';
+    $filename    = $_POST['resumableFilename'] ?? '';
+    $chunkNumber = (int)($_POST['resumableChunkNumber'] ?? 1);
+    $totalChunks = (int)($_POST['resumableTotalChunks'] ?? 1);
 
-    // Validar si llegaron todos los fragmentos
-    $all_chunks_received = true;
-    for ($i = 1; $i <= $resumableTotalChunks; $i++) {
-        if (!file_exists($chunk_dir . '/' . $resumableFilename . '.part' . $i)) {
-            $all_chunks_received = false;
+    // Guardar el fragmento actual en temporal
+    $destFile = $temp_dir . '/' . $identifier . '.part' . $chunkNumber;
+    move_uploaded_file($_FILES['file']['tmp_name'], $destFile);
+
+    // Verificar si ya tenemos todos los fragmentos
+    $allChunksExist = true;
+    for ($i = 1; $i <= $totalChunks; $i++) {
+        if (!file_exists($temp_dir . '/' . $identifier . '.part' . $i)) {
+            $allChunksExist = false;
             break;
         }
     }
 
-    if ($all_chunks_received) {
-        $cliente    = preg_replace('/[^a-zA-Z0-9_-]/', '_', $_POST['cliente'] ?? 'cliente');
-        $sucursal   = preg_replace('/[^a-zA-Z0-9_-]/', '_', $_POST['sucursal'] ?? 'sucursal');
-        $fecha      = $_POST['fecha'] ?? date('Y-m-d');
-        $video_id   = preg_replace('/[^a-zA-Z0-9_-]/', '_', $_POST['video_id'] ?? 'id');
-        $tipo_video = $_POST['tipo_video'] ?? 'video_general';
-
-        // 1. Unir fragmentos
-        $final_local_video = $temp_dir . '/' . $tipo_video . '_' . $video_id . '_' . $resumableFilename;
-        $out = fopen($final_local_video, 'wb');
-
-        for ($i = 1; $i <= $resumableTotalChunks; $i++) {
-            $chunk_file = $chunk_dir . '/' . $resumableFilename . '.part' . $i;
-            $in = fopen($chunk_file, 'rb');
-            stream_copy_to_stream($in, $out);
-            fclose($in);
-            @unlink($chunk_file);
-        }
-        fclose($out);
-        @rmdir($chunk_dir);
-
-        // 2. Crear archivo de texto con la información
-        $txt_content  = "DETALLES DE LA INSPECCIÓN\n";
-        $txt_content .= "=========================\n";
-        $txt_content .= "Cliente: " . ($_POST['cliente'] ?? '') . "\n";
-        $txt_content .= "Sucursal: " . ($_POST['sucursal'] ?? '') . "\n";
-        $txt_content .= "Fecha Toma: " . $fecha . "\n";
-        $txt_content .= "ID Inspección: " . $video_id . "\n";
-        $txt_content .= "Fecha Carga: " . date('Y-m-d H:i:s') . "\n";
-
-        $final_local_txt = $temp_dir . '/datos_registro.txt';
-        file_put_contents($final_local_txt, $txt_content);
-
-        $extension = pathinfo($resumableFilename, PATHINFO_EXTENSION);
-
-        // --- OPCIÓN A: MODO LOCAL EN LARAGON ---
-        if ($MODO_PRUEBA_LOCAL) {
-            $dir_destino = __DIR__ . "/almacen_local/{$sucursal}/{$fecha}_{$cliente}_{$video_id}";
-            if (!file_exists($dir_destino)) {
-                mkdir($dir_destino, 0777, true);
-            }
-
-            copy($final_local_txt, "{$dir_destino}/datos_registro.txt");
-            rename($final_local_video, "{$dir_destino}/{$tipo_video}.{$extension}");
-            @unlink($final_local_txt);
-
-            echo json_encode(['status' => 'success', 'message' => 'Procesado localmente con éxito']);
-            exit;
-        }
-
-        // --- OPCIÓN B: MODO HETZNER STORAGE BOX (SFTP) ---
-        $connection = ssh2_connect($sftp_host, $sftp_port);
-        if ($connection && ssh2_auth_password($connection, $sftp_user, $sftp_pass)) {
-            $sftp = ssh2_sftp($connection);
-
-            $dir_remoto = "subidas/{$sucursal}/{$fecha}_{$cliente}_{$video_id}";
-            @ssh2_sftp_mkdir($sftp, "subidas/{$sucursal}", 0777, true);
-            @ssh2_sftp_mkdir($sftp, $dir_remoto, 0777, true);
-
-            ssh2_scp_send($connection, $final_local_txt, "{$dir_remoto}/datos_registro.txt", 0644);
-            ssh2_scp_send($connection, $final_local_video, "{$dir_remoto}/{$tipo_video}.{$extension}", 0644);
-
-            @unlink($final_local_txt);
-            @unlink($final_local_video);
-
-            echo json_encode(['status' => 'success', 'message' => 'Video enviado a Hetzner.']);
-            exit;
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'Error de conexión SFTP con Hetzner.']);
-            exit;
-        }
+    // Si aún faltan fragmentos, respondemos OK a Resumable.js para que siga subiendo
+    if (!$allChunksExist) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'chunk_uploaded', 'chunk' => $chunkNumber]);
+        exit();
     }
 
-    echo json_encode(['status' => 'uploading_chunk']);
-    exit;
+    // --------------------------------------------------------------
+    // 4. ENSAMBLADO LOCAL DEL ARCHIVO COMPLETO
+    // --------------------------------------------------------------
+    $finalLocalFile = $temp_dir . '/' . $identifier . '_' . $filename;
+    $out = fopen($finalLocalFile, 'wb');
+
+    if ($out) {
+        for ($i = 1; $i <= $totalChunks; $i++) {
+            $chunkPath = $temp_dir . '/' . $identifier . '.part' . $i;
+            $in = fopen($chunkPath, 'rb');
+            if ($in) {
+                while ($buff = fread($in, 4096)) {
+                    fwrite($out, $buff);
+                }
+                fclose($in);
+            }
+            @unlink($chunkPath); // Limpiar fragmento temporal
+        }
+        fclose($out);
+    }
+
+    // Responder a Resumable.js que el archivo individual está listo localmente
+    header('Content-Type: application/json');
+    echo json_encode([
+        'status' => 'file_assembled',
+        'file_path' => $finalLocalFile,
+        'filename' => $filename
+    ]);
+    exit();
 }
-?>
+
+// ------------------------------------------------------------------
+// 5. PROCESAMIENTO FINAL Y TRANSFERENCIA A HETZNER (SFTP)
+// ------------------------------------------------------------------
+// Esta sección se ejecuta cuando el cliente presiona el botón final con la metadata
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'finalize') {
+    
+    header('Content-Type: application/json');
+
+    // Recibir metadata del formulario
+    $sucursal = preg_replace('/[^a-zA-Z0-9_-]/', '_', $_POST['sucursal'] ?? 'general');
+    $cliente  = preg_replace('/[^a-zA-Z0-9_-]/', '_', $_POST['cliente'] ?? 'cliente');
+    $id       = preg_replace('/[^a-zA-Z0-9_-]/', '_', $_POST['id'] ?? '000');
+    $fecha    = date('Y-m-d_H-i');
+
+    $file1_local = $_POST['file1_path'] ?? ''; // Ruta local del video de presentación
+    $file2_local = $_POST['file2_path'] ?? ''; // Ruta local del video de contrato
+
+    try {
+        // Conexión SFTP usando phpseclib3
+        $sftp = new SFTP($sftp_host, $sftp_port);
+
+        if (!$sftp->login($sftp_user, $sftp_pass)) {
+            throw new Exception("Error de autenticación en Hetzner Storage Box.");
+        }
+
+        // Definir estructura de carpetas remota
+        // Estructura: subidas/SUCURSAL/FECHA_CLIENTE_ID/
+        $remote_dir = "subidas/{$sucursal}/{$fecha}_{$cliente}_{$id}";
+
+        if (!$sftp->file_exists($remote_dir)) {
+            // El tercer argumento 'true' crea directorios anidados de forma recursiva
+            if (!$sftp->mkdir($remote_dir, 0755, true)) {
+                throw new Exception("No se pudo crear la carpeta remota: {$remote_dir}");
+            }
+        }
+
+        // A. Generar y subir el archivo de metadata
+        $contenido_txt = "=== REGISTRO DE INSPECCIÓN ===\n";
+        $contenido_txt .= "Sucursal: {$sucursal}\n";
+        $contenido_txt .= "Cliente: {$cliente}\n";
+        $contenido_txt .= "ID Inspección: {$id}\n";
+        $contenido_txt .= "Fecha de subida: " . date('Y-m-d H:i:s') . "\n";
+        
+        $sftp->put("{$remote_dir}/datos_registro.txt", $contenido_txt);
+
+        // B. Subir el Video 1 (Presentación)
+        if (!empty($file1_local) && file_exists($file1_local)) {
+            $ext1 = pathinfo($file1_local, PATHINFO_EXTENSION);
+            $remote_file1 = "{$remote_dir}/presentacion." . ($ext1 ?: 'mp4');
+            
+            $uploaded1 = $sftp->put($remote_file1, $file1_local, SFTP::SOURCE_LOCAL_FILE);
+            if (!$uploaded1) {
+                throw new Exception("Error al transferir el video de presentación a Hetzner.");
+            }
+            @unlink($file1_local); // Borrar el ensamblado local tras subir a la nube
+        }
+
+        // C. Subir el Video 2 (Firma de Contrato)
+        if (!empty($file2_local) && file_exists($file2_local)) {
+            $ext2 = pathinfo($file2_local, PATHINFO_EXTENSION);
+            $remote_file2 = "{$remote_dir}/firma_contrato." . ($ext2 ?: 'mp4');
+            
+            $uploaded2 = $sftp->put($remote_file2, $file2_local, SFTP::SOURCE_LOCAL_FILE);
+            if (!$uploaded2) {
+                throw new Exception("Error al transferir el video de contrato a Hetzner.");
+            }
+            @unlink($file2_local); // Borrar el ensamblado local tras subir a la nube
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Proceso completado con éxito. Videos y registros almacenados en Hetzner Storage Box.',
+            'remote_folder' => $remote_dir
+        ]);
+
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error'   => $e->getMessage()
+        ]);
+    }
+    exit();
+}

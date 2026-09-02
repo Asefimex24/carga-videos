@@ -1,7 +1,0 @@
-DETALLES DE LA INSPECCIÓN
-=========================
-Cliente: sdfsdf
-Sucursal: Sur
-Fecha Toma: sdfsdf
-ID Inspección: sdfsdf
-Fecha Carga: 2026-08-17 21:03:13
