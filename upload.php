@@ -1,5 +1,27 @@
 <?php
 
+include 'config/config.php';
+
+//crear conexion PDO de la base de datos
+try {
+
+    $pdo = new PDO(
+        "mysql:host={$db_host};dbname={$db_name};charset=utf8mb4",
+        $db_user,
+        $db_pass,
+        [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        ]
+    );
+
+} catch(PDOException $e) {
+
+    die('Error BD: ' . $e->getMessage());
+
+}
+
+
+
 // --- CONFIGURACIÓN ---
 // $MODO_PRUEBA_LOCAL = false; // Cambiar a 'false' cuando tengas tus accesos de Hetzner
 
@@ -12,15 +34,16 @@ error_reporting(E_ALL);
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+
 use phpseclib3\Net\SFTP;
 
 // ------------------------------------------------------------------
 // 2. PARÁMETROS DE CONEXIÓN HETZNER STORAGE BOX
 // ------------------------------------------------------------------
-$sftp_host = 'u659197.your-storagebox.de'; // Reemplaza con tu host
-$sftp_port = 22;
-$sftp_user = 'u659197';                    // Reemplaza con tu usuario
-$sftp_pass = 'G_3NQAnqQwkt6XedZWZqf6';      // Reemplaza con tu contraseña
+$sftp_host = $host; // Reemplaza con tu host
+$sftp_port = $port;
+$sftp_user = $user;                    // Reemplaza con tu usuario
+$sftp_pass = $pass;      // Reemplaza con tu contraseña
 
 // Directores locales temporales en Laragon
 $temp_dir = __DIR__ . '/uploads_temp';
@@ -112,6 +135,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 // Esta sección se ejecuta cuando el cliente presiona el botón final con la metadata
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'finalize') {
 
+    //variables para guardar archivos en DB
+    $remote_file1 = null;
+    $remote_file2 = null;
+
     set_time_limit(0);
     ini_set('max_execution_time', '0');
     ini_set('memory_limit', '512M');
@@ -183,7 +210,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 throw new Exception("Error al transferir el video de contrato a Hetzner.");
             }
             @unlink($file2_local); // Borrar el ensamblado local tras subir a la nube
+
+
+
         }
+
+        $stmt = $pdo->prepare("INSERT INTO cargavideos (sucursal,cliente,credito,fecha_captura,carpeta_remota,video_presentacion,video_contrato)
+                                VALUES (:sucursal,:cliente,:folio,:fecha_captura,:carpeta_remota,:video_presentacion,:video_contrato)");
+
+        $stmt->execute([':sucursal' => $sucursal,':cliente' => $cliente,':folio' => $id,':fecha_captura' => date('Y-m-d H:i:s'),':carpeta_remota' => $remote_dir,':video_presentacion' => $remote_file1,':video_contrato' => $remote_file2]);
+
 
         echo json_encode([
             'success' => true,
