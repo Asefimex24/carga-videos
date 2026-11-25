@@ -1,22 +1,63 @@
-$(document).on("click", ".btn-video", function () {
-  const id = $(this).data("id");
-  const tipo = $(this).data("tipo");
+document.addEventListener("DOMContentLoaded", () => {
+  const modalEl = document.getElementById("videoModal");
+  const videoPlayer = document.getElementById("videoPlayer");
+  const modalTitle = modalEl.querySelector(".modal-title");
+  const bsModal = new bootstrap.Modal(modalEl);
 
-  const video = document.getElementById("videoPlayer");
+  const nombresTipo = {
+    video1: "Video 1: Presentación",
+    video2: "Video 2: Firma de Contrato",
+    video3: "Video 3: Firma de Aval(es)",
+  };
 
-  video.src = `stream.php?id=${id}&tipo=${tipo}`;
+  // Delegación de clics para botones generados por DataTables
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".btn-video");
+    if (!btn) return;
 
-  const modal = new bootstrap.Modal(document.getElementById("videoModal"));
+    const id = btn.dataset.id;
+    const tipo = btn.dataset.tipo;
+    const htmlOriginal = btn.innerHTML;
 
-  modal.show();
-});
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
 
-document.getElementById("videoModal").addEventListener("hidden.bs.modal", function () {
-  const video = document.getElementById("videoPlayer");
+    try {
+      const response = await fetch(`../api/videos/ver.php?id=${encodeURIComponent(id)}&tipo=${encodeURIComponent(tipo)}`);
+      const data = await response.json();
 
-  video.pause();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "No se pudo obtener el enlace del video.");
+      }
 
-  video.removeAttribute("src");
+      // Actualizar título del modal con contexto
+      modalTitle.textContent = `${nombresTipo[tipo] || "Reproductor"} — ${data.cliente} (${data.credito})`;
 
-  video.load();
+      // Cargar URL firmada y abrir modal
+      videoPlayer.src = data.url;
+      videoPlayer.load();
+      bsModal.show();
+
+      // Intentar reproducción automática al abrir
+      videoPlayer.play().catch(() => {
+        // Algunos navegadores requieren clic manual en Play si no está muteado
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error al reproducir",
+        text: error.message,
+      });
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = htmlOriginal;
+    }
+  });
+
+  // Detener y descargar el buffer del video cuando el usuario cierre el modal
+  modalEl.addEventListener("hidden.bs.modal", () => {
+    videoPlayer.pause();
+    videoPlayer.removeAttribute("src");
+    videoPlayer.load();
+  });
 });
