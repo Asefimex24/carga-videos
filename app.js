@@ -1,16 +1,18 @@
 document.addEventListener("DOMContentLoaded", () => {
   let file1 = null;
   let file2 = null;
+  let file3 = null;
   const fileInputs = [];
 
-  const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB por fragmento (mínimo S3 es 5 MB)
+  const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB por fragmento (mínimo S3/R2 es 5 MB)
   const CONCURRENCY = 4; // 4 conexiones paralelas por vídeo
 
-  function setupDropzone(dropzoneId, browseBtnId, nameLabelId, progressBarId, onFileSelected) {
+  function setupDropzone(dropzoneId, browseBtnId, nameLabelId, progressBarId, onFileSelected, clearBtnId = null) {
     const dropzone = document.getElementById(dropzoneId);
     const browseBtn = document.getElementById(browseBtnId);
     const nameLabel = document.getElementById(nameLabelId);
     const progressBar = document.getElementById(progressBarId);
+    const clearBtn = clearBtnId ? document.getElementById(clearBtnId) : null;
 
     const input = document.createElement("input");
     input.type = "file";
@@ -29,8 +31,21 @@ document.addEventListener("DOMContentLoaded", () => {
       nameLabel.textContent = `${file.name} (${sizeMB} MB)`;
       progressBar.style.width = "0%";
       progressBar.textContent = "0%";
+      if (clearBtn) clearBtn.classList.remove("hidden");
       onFileSelected(file);
     };
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        input.value = "";
+        nameLabel.textContent = "";
+        progressBar.style.width = "0%";
+        progressBar.textContent = "0%";
+        clearBtn.classList.add("hidden");
+        onFileSelected(null);
+      });
+    }
 
     browseBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -58,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setupDropzone("file1-dropzone", "file1-browse", "file1-name", "file1-progress", (f) => (file1 = f));
   setupDropzone("file2-dropzone", "file2-browse", "file2-name", "file2-progress", (f) => (file2 = f));
+  setupDropzone("file3-dropzone", "file3-browse", "file3-name", "file3-progress", (f) => (file3 = f), "file3-clear");
 
   async function postJson(url, bodyData) {
     const response = await fetch(url, {
@@ -73,7 +89,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Sube un fragmento individual y devuelve su ETag
   function uploadSingleChunk(url, blob, onProgress) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -87,7 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           const etag = xhr.getResponseHeader("ETag");
           if (!etag) {
-            reject(new Error("Falta cabecera ETag en respuesta S3. Revisa ExposeHeaders en CORS."));
+            reject(new Error("Falta cabecera ETag en respuesta R2/S3. Revisa ExposeHeaders en CORS."));
             return;
           }
           resolve(etag);
@@ -101,7 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Gestiona la subida multiparte paralela completa de un archivo
   async function uploadMultipartVideo(file, metaS3, progressBarId) {
     const bar = document.getElementById(progressBarId);
     const totalParts = metaS3.parts.length;
@@ -117,7 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
-      // Pool de trabajadores paralelos (CONCURRENCY = 4)
       const workers = Array.from({ length: Math.min(CONCURRENCY, totalParts) }, async () => {
         while (currentIndex < totalParts) {
           const idx = currentIndex++;
@@ -143,7 +156,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       await Promise.all(workers);
 
-      // Indicar a Hetzner que una los fragmentos
       const resComplete = await postJson("api/geturl/multipartS3.php", {
         accion: "completar",
         key: metaS3.key,
@@ -152,13 +164,12 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (!resComplete.ok) {
-        throw new Error(resComplete.error || "No se pudo ensamblar el video en S3.");
+        throw new Error(resComplete.error || "No se pudo ensamblar el video en R2.");
       }
 
       bar.style.width = "100%";
       bar.textContent = "100%";
     } catch (err) {
-      // Limpia los fragmentos huérfanos en Hetzner si algo falló
       postJson("api/geturl/multipartS3.php", {
         accion: "abortar",
         key: metaS3.key,
@@ -174,10 +185,14 @@ document.addEventListener("DOMContentLoaded", () => {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    // Solo validamos que existan los 2 obligatorios
     if (!file1 || !file2) {
       Swal.fire("Faltan videos", "Debes adjuntar tanto el Video 1 (Presentación) como el Video 2 (Contrato).", "warning");
       return;
     }
+
+    const tieneVideo3 = Boolean(file3);
+    const totalVideos = tieneVideo3 ? 3 : 2;
 
     const parts1 = Math.max(1, Math.ceil(file1.size / CHUNK_SIZE));
     const parts2 = Math.max(1, Math.ceil(file2.size / CHUNK_SIZE));
@@ -197,6 +212,13 @@ document.addEventListener("DOMContentLoaded", () => {
       parts2,
     };
 
+    // Si hay tercer video, agregamos sus metadatos al payload de inicio
+    if (tieneVideo3) {
+      payload.file3Name = file3.name;
+      payload.file3Type = file3.type || "video/mp4";
+      payload.parts3 = Math.max(1, Math.ceil(file3.size / CHUNK_SIZE));
+    }
+
     btnSubmit.disabled = true;
     btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Preparando subida...</span>';
 
@@ -207,12 +229,18 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(dataInit.error || "No se pudo iniciar la subida multiparte.");
       }
 
-      // 2. Subir Video 1 y luego Video 2 (cada uno usando 4 hilos paralelos)
-      btnSubmit.innerHTML = '<i class="fa-solid fa-cloud-arrow-up fa-bounce"></i><span>Subiendo Video 1 de 2...</span>';
+      // 2. Subir Video 1 y Video 2
+      btnSubmit.innerHTML = `<i class="fa-solid fa-cloud-arrow-up fa-bounce"></i><span>Subiendo Video 1 de ${totalVideos}...</span>`;
       await uploadMultipartVideo(file1, dataInit.video1, "file1-progress");
 
-      btnSubmit.innerHTML = '<i class="fa-solid fa-cloud-arrow-up fa-bounce"></i><span>Subiendo Video 2 de 2...</span>';
+      btnSubmit.innerHTML = `<i class="fa-solid fa-cloud-arrow-up fa-bounce"></i><span>Subiendo Video 2 de ${totalVideos}...</span>`;
       await uploadMultipartVideo(file2, dataInit.video2, "file2-progress");
+
+      // Subir Video 3 únicamente si fue seleccionado
+      if (tieneVideo3 && dataInit.video3) {
+        btnSubmit.innerHTML = `<i class="fa-solid fa-cloud-arrow-up fa-bounce"></i><span>Subiendo Video 3 de ${totalVideos}...</span>`;
+        await uploadMultipartVideo(file3, dataInit.video3, "file3-progress");
+      }
 
       // 3. Guardar registro en MySQL
       btnSubmit.innerHTML = '<i class="fa-solid fa-database fa-beat"></i><span>Guardando registro...</span>';
@@ -224,24 +252,29 @@ document.addEventListener("DOMContentLoaded", () => {
         fechaDesem: payload.fechaDesem,
         ruta_video1: dataInit.video1.key,
         ruta_video2: dataInit.video2.key,
+        ruta_video3: tieneVideo3 && dataInit.video3 ? dataInit.video3.key : null,
       });
 
       if (!dataDb.ok) {
         throw new Error(dataDb.error || "Los videos subieron, pero falló el guardado en MySQL.");
       }
 
-      await Swal.fire("¡Éxito!", "Los videos se subieron rápidamente y el registro quedó guardado.", "success");
+      await Swal.fire("¡Éxito!", `Los ${totalVideos} videos se subieron correctamente y el registro quedó guardado.`, "success");
 
+      // Limpiar formulario y estados de los 3 dropzones
       form.reset();
       file1 = null;
       file2 = null;
+      file3 = null;
       fileInputs.forEach((inp) => (inp.value = ""));
-      document.getElementById("file1-name").textContent = "";
-      document.getElementById("file2-name").textContent = "";
-      document.getElementById("file1-progress").style.width = "0%";
-      document.getElementById("file1-progress").textContent = "0%";
-      document.getElementById("file2-progress").style.width = "0%";
-      document.getElementById("file2-progress").textContent = "0%";
+      document.getElementById("file3-clear").classList.add("hidden");
+
+      ["1", "2", "3"].forEach((num) => {
+        document.getElementById(`file${num}-name`).textContent = "";
+        const bar = document.getElementById(`file${num}-progress`);
+        bar.style.width = "0%";
+        bar.textContent = "0%";
+      });
     } catch (err) {
       Swal.fire("Error", err.message, "error");
     } finally {

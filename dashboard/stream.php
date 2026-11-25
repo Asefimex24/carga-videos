@@ -6,14 +6,14 @@ require_once __DIR__ . '../../vendor/autoload.php';
 use phpseclib3\Net\SFTP;
 
 $id = intval($_GET['id'] ?? 0);
-$tipo = $_GET['tipo'] ?? 'presentacion';
+$tipo = $_GET['tipo'] ?? 'video1';
 
 try {
 
     $pdo = new PDO(
-        "mysql:host={$db_host};dbname={$db_name};charset=utf8mb4",
-        $db_user,
-        $db_pass,
+        "mysql:host={$dbHost};dbname={$dbName};charset=utf8mb4",
+        $dbUser,
+        $dbPass,
         [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
         ]
@@ -34,9 +34,9 @@ try {
         exit;
     }
 
-    $ruta = ($tipo === 'contrato')
-        ? $row['video_contrato']
-        : $row['video_presentacion'];
+    $ruta = ($tipo === 'video2')
+        ? $row['video1']
+        : $row['video2'];
 
     $sftp = new SFTP($host, $port);
 
@@ -65,9 +65,7 @@ try {
     readfile($tempFile);
 
     unlink($tempFile);
-
-} catch(Exception $e) {
+} catch (Exception $e) {
 
     http_response_code(500);
-
 }

@@ -2,11 +2,10 @@
 
 header('Content-Type: application/json; charset=utf-8');
 
-//cargar datos de conguracion
+// Cargar datos de configuración
 include '../../config/config.php';
 
 date_default_timezone_set('America/Mexico_City');
-
 
 // 1. Configuración de conexión a MySQL
 $host     = $dbHost;
@@ -23,17 +22,18 @@ if (!$input) {
     exit;
 }
 
-$sucursal    = trim($input['sucursal'] ?? '');
-$cliente     = mb_strtoupper(trim($input['cliente'] ?? ''), 'UTF-8');
-$credito     = trim($input['credito'] ?? '');
-$ejecutivo   = mb_strtoupper(trim($input['ejecutivo'] ?? ''), 'UTF-8');
-$fechaDesem  = trim($input['fechaDesem'] ?? '');
-$rutaVideo1  = trim($input['ruta_video1'] ?? '');
-$rutaVideo2  = trim($input['ruta_video2'] ?? '');
+$sucursal       = trim($input['sucursal'] ?? '');
+$cliente        = mb_strtoupper(trim($input['cliente'] ?? ''), 'UTF-8');
+$credito        = trim($input['credito'] ?? '');
+$ejecutivo      = mb_strtoupper(trim($input['ejecutivo'] ?? ''), 'UTF-8');
+$fechaDesem     = trim($input['fechaDesem'] ?? '');
+$rutaVideo1     = trim($input['ruta_video1'] ?? '');
+$rutaVideo2     = trim($input['ruta_video2'] ?? '');
+// Si no viene ruta_video3 o viene vacía, se asigna null
+$rutaVideo3     = !empty($input['ruta_video3']) ? trim($input['ruta_video3']) : null;
 $fecha_registro = date('Y-m-d H:i:s');
 
-
-// 3. Validar que ningún campo obligatorio venga vacío
+// 3. Validar que ningún campo obligatorio venga vacío (video3 queda fuera por ser opcional)
 if (
     empty($sucursal) || empty($credito) || empty($cliente) ||
     empty($ejecutivo) || empty($fechaDesem) ||
@@ -45,7 +45,7 @@ if (
 }
 
 try {
-    // 4. Conectar con PDO usando consultas preparadas (protegido contra inyección SQL)
+    // 4. Conectar con PDO usando consultas preparadas
     $dsn = "mysql:host={$host};dbname={$dbname};charset=utf8mb4";
     $pdo = new PDO($dsn, $usuario, $password, [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
@@ -54,9 +54,9 @@ try {
     ]);
 
     $sql = "INSERT INTO videos 
-            (sucursal, credito, cliente, ejecutivo, fecha_desembolso, video1, video2,fecha_registro) 
+            (sucursal, credito, cliente, ejecutivo, fecha_desembolso, video1, video2, video3, fecha_registro) 
             VALUES 
-            (:sucursal, :credito, :cliente, :ejecutivo, :fecha_desembolso, :ruta_video1, :ruta_video2, :fecha_registro)";
+            (:sucursal, :credito, :cliente, :ejecutivo, :fecha_desembolso, :ruta_video1, :ruta_video2, :ruta_video3, :fecha_registro)";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
@@ -67,7 +67,8 @@ try {
         ':fecha_desembolso' => $fechaDesem,
         ':ruta_video1'      => $rutaVideo1,
         ':ruta_video2'      => $rutaVideo2,
-        ':fecha_registro'   =>  $fecha_registro,
+        ':ruta_video3'      => $rutaVideo3,
+        ':fecha_registro'   => $fecha_registro,
     ]);
 
     echo json_encode([
