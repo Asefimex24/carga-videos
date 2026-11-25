@@ -206,3 +206,112 @@
         height: 80%;
         object-fit: contain;
       }
+      /* Botones elegantes estilo Soft-Pill para reproducción */
+.btn-play-evidencia {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.32rem 0.85rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  letter-spacing: 0.01em;
+}
+
+.btn-play-evidencia i {
+  font-size: 0.88rem;
+  transition: transform 0.2s ease;
+}
+
+.btn-play-evidencia:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn-play-evidencia:hover:not(:disabled) i {
+  transform: scale(1.15);
+}
+
+.btn-play-evidencia:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Variante Video 1: Presentación (Azul Zafiro) */
+.btn-video-1 {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+.btn-video-1:hover:not(:disabled) {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 4px 10px -2px rgba(37, 99, 235, 0.35);
+}
+
+/* Variante Video 2: Firma Contrato (Verde Esmeralda) */
+.btn-video-2 {
+  background-color: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+.btn-video-2:hover:not(:disabled) {
+  background-color: #059669;
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 4px 10px -2px rgba(5, 150, 105, 0.35);
+}
+
+/* Variante Video 3: Firma Aval (Índigo / Violeta) */
+.btn-video-3 {
+  background-color: #eef2ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+}
+.btn-video-3:hover:not(:disabled) {
+  background-color: #4f46e5;
+  color: #ffffff;
+  border-color: #4f46e5;
+  box-shadow: 0 4px 10px -2px rgba(79, 70, 229, 0.35);
+}
+
+/* Etiqueta discreta cuando el video opcional no aplica */
+.badge-no-aplica {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.73rem;
+  font-weight: 500;
+  color: #94a3b8;
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 9999px;
+}
+
+/* Etiqueta elegante para Sucursal */
+.badge-sucursal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.68rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #334155;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.45rem;
+  letter-spacing: 0.01em;
+}
+
+.badge-sucursal::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  flex-shrink: 0;
+}

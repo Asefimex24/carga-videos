@@ -48,7 +48,7 @@ async function cargarVideos() {
         {
           data: "sucursal",
           render: function (data) {
-            return `<span class="badge bg-primary">${data}</span>`;
+            return `<span class="badge-sucursal">${data}</span>`;
           },
         },
         {
@@ -60,15 +60,13 @@ async function cargarVideos() {
         {
           data: null,
           orderable: false,
+          className: "text-center",
           render: function (row) {
-            if (!row.video1) return `<span class="text-muted small">Sin video</span>`;
+            if (!row.video1) return `<span class="badge-no-aplica">Sin archivo</span>`;
             return `
-              <button
-                class="btn btn-primary btn-sm btn-video"
-                data-id="${row.id_registro}"
-                data-tipo="video1"
-              >
-                <i class="bi bi-play-circle"></i> Ver
+              <button type="button" class="btn-play-evidencia btn-video-1 btn-video" data-id="${row.id_registro}" data-tipo="video1">
+                <i class="bi bi-play-fill"></i>
+                <span>Ver video</span>
               </button>
             `;
           },
@@ -76,15 +74,13 @@ async function cargarVideos() {
         {
           data: null,
           orderable: false,
+          className: "text-center",
           render: function (row) {
-            if (!row.video2) return `<span class="text-muted small">Sin video</span>`;
+            if (!row.video2) return `<span class="badge-no-aplica">Sin archivo</span>`;
             return `
-              <button
-                class="btn btn-success btn-sm btn-video"
-                data-id="${row.id_registro}"
-                data-tipo="video2"
-              >
-                <i class="bi bi-camera-video"></i> Ver
+              <button type="button" class="btn-play-evidencia btn-video-2 btn-video" data-id="${row.id_registro}" data-tipo="video2">
+                <i class="bi bi-play-fill"></i>
+                <span>Ver video</span>
               </button>
             `;
           },
@@ -92,20 +88,15 @@ async function cargarVideos() {
         {
           data: null,
           orderable: false,
+          className: "text-center",
           render: function (row) {
-            // Si no se subió video opcional de aval, mostrar etiqueta neutra
             if (!row.video3) {
-              return `<span class="badge bg-secondary-subtle text-secondary border">No aplica</span>`;
+              return `<span class="badge-no-aplica"><i class="bi bi-dash"></i>No aplica</span>`;
             }
-
-            // Corregido: data-tipo="video3"
             return `
-              <button
-                class="btn btn-info text-white btn-sm btn-video"
-                data-id="${row.id_registro}"
-                data-tipo="video3"
-              >
-                <i class="bi bi-person-check"></i> Ver
+              <button type="button" class="btn-play-evidencia btn-video-3 btn-video" data-id="${row.id_registro}" data-tipo="video3">
+                <i class="bi bi-play-fill"></i>
+                <span>Ver video</span>
               </button>
             `;
           },
